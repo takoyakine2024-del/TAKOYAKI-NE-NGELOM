@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>Riwayat Transaksi - TAKOYAKI NE</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #fffbe6;
+      padding: 20px;
+      color: #333;
+    }
+
+    h1 {
+      text-align: center;
+      color: #ff9800;
+    }
+
+    .filter-container {
+      margin-top: 20px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    input[type="date"], input[type="text"] {
+      padding: 6px;
+      font-size: 14px;
+    }
+
+    button, .back-btn {
+      background-color: #4caf50;
+      color: white;
+      padding: 8px 12px;
+      border-radius: 5px;
+      border: none;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .back-btn:hover, button:hover {
+      background-color: #45a049;
+    }
+
+    .export-btn {
+      background-color: #2196f3;
+    }
+
+    .print-btn {
+      background-color: #ff9800;
+      color: white;
+      padding: 6px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-right: 5px;
+    }
+
+    .print-btn:hover {
+      background-color: #fb8c00;
+    }
+
+    .delete-btn {
+      background-color: #f44336;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      text-align: left;
+      font-size: 14px;
+      vertical-align: top;
+    }
+
+    th {
+      background-color: #ffd700;
+    }
+
+    tr:nth-child(even) {
+      background-color: #f9f9f9;
+    }
+
+    pre {
+      white-space: pre-wrap;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      margin: 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>Riwayat Transaksi</h1>
+
+  <div class="filter-container">
+    <label>Tanggal Awal: <input type="date" id="startDate"></label>
+    <label>Tanggal Akhir: <input type="date" id="endDate"></label>
+    <label>Cari Nomor Transaksi: <input type="text" id="searchInput" placeholder="Contoh: TX00123"></label>
+    <button onclick="applyFilter()">Terapkan Filter</button>
+    <button onclick="resetFilter()">Reset</button>
+    <button onclick="exportToExcel()" class="export-btn">Ekspor ke Excel</button>
+    <button onclick="window.location.href='kasir.html'" class="back-btn">Kembali ke Kasir</button>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Tanggal</th>
+        <th>Nomor Transaksi</th>
+        <th>Total</th>
+        <th>Jenis Pembayaran</th>
+        <th>Aksi</th>
+        <th>Detail Struk</th>
+      </tr>
+    </thead>
+    <tbody id="riwayat-body"></tbody>
+  </table>
+
+  <script>
+    let data = JSON.parse(localStorage.getItem('transaksi')) || [];
+
+    function renderTable(filteredData) {
+      const tbody = document.getElementById('riwayat-body');
+      tbody.innerHTML = '';
+
+      filteredData.forEach((tx, index) => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${tx.waktu}</td>
+          <td>${tx.nomorTransaksi}</td>
+          <td>Rp${tx.total.toLocaleString('id-ID')}</td>
+          <td>${tx.method}</td>
+          <td>
+            <button class="print-btn" onclick="printStruk(\`${tx.struk}\`)">Cetak</button>
+            <button class="print-btn" id="btn-struk-${index}" onclick="toggleStruk(${index})">Lihat Struk</button>
+            <button class="print-btn delete-btn" onclick="hapusTransaksi(${index})">Hapus</button>
+          </td>
+          <td><pre id="struk-${index}" style="display:none">${tx.struk}</pre></td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    function printStruk(struk) {
+      const encoded = encodeURIComponent(struk);
+      window.location.href = "rawbt:" + encoded;
+    }
+
+    function toggleStruk(id) {
+      const el = document.getElementById('struk-' + id);
+      const btn = document.getElementById('btn-struk-' + id);
+      if (el.style.display === 'none') {
+        el.style.display = 'block';
+        btn.textContent = 'Sembunyikan Struk';
+      } else {
+        el.style.display = 'none';
+        btn.textContent = 'Lihat Struk';
+      }
+    }
+
+    function hapusTransaksi(index) {
+      if (confirm("Yakin ingin menghapus transaksi ini?")) {
+        data.splice(index, 1);
+        localStorage.setItem('transaksi', JSON.stringify(data));
+        applyFilter();
+      }
+    }
+
+    function applyFilter() {
+      const start = document.getElementById('startDate').value;
+      const end = document.getElementById('endDate').value;
+      const keyword = document.getElementById('searchInput').value.toLowerCase();
+
+      let filtered = data.filter(tx => {
+        const tanggal = new Date(tx.waktu);
+        const matchTanggal = (!start || tanggal >= new Date(start)) && (!end || tanggal <= new Date(end));
+        const matchKeyword = !keyword || tx.nomorTransaksi.toLowerCase().includes(keyword);
+        return matchTanggal && matchKeyword;
+      });
+
+      renderTable(filtered);
+    }
+
+    function resetFilter() {
+      document.getElementById('startDate').value = '';
+      document.getElementById('endDate').value = '';
+      document.getElementById('searchInput').value = '';
+      renderTable(data);
+    }
+
+    function exportToExcel() {
+      if (data.length === 0) {
+        alert("Belum ada data transaksi untuk diekspor.");
+        return;
+      }
+
+      let table = `<table border="1">
+        <tr>
+          <th>Tanggal</th>
+          <th>Nomor Transaksi</th>
+          <th>Total</th>
+          <th>Jenis Pembayaran</th>
+          <th>Detail Struk</th>
+        </tr>`;
+
+      data.forEach(tx => {
+        table += `<tr>
+          <td>${tx.waktu}</td>
+          <td>${tx.nomorTransaksi}</td>
+          <td>Rp${tx.total}</td>
+          <td>${tx.method}</td>
+          <td>${tx.struk.replace(/\n/g, '<br>')}</td>
+        </tr>`;
+      });
+
+      table += `</table>`;
+
+      const blob = new Blob([table], { type: "application/vnd.ms-excel" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "riwayat_transaksi_takoyaki.xls";
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    // Render awal
+    renderTable(data);
+  </script>
+</body>
+</html>
