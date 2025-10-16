@@ -315,9 +315,9 @@
     function initGoogleAPI() {
   gapi.load('client:auth2', () => {
     gapi.client.init({
-      apiKey: 'YOUR_API_KEY',
-      clientId: 'YOUR_CLIENT_ID',
-      scope: 'https://www.googleapis.com/auth/spreadsheets',
+      apiKey: 'AIzaSyAIBvEGkaWrnPUz3a5YIOMstmu_hvPlYBw',
+      clientId: '654107114939-u5lj5hvusr0s4q1q8qq7r8bsus7p5itk.apps.googleusercontent.com',
+      scope: 'https://docs.google.com/spreadsheets/d/1CFtO-iM1iEYuhcHaW8h16LdXYe1zAcZxYlaTn2bvbb8/edit',
       discoveryDocs: ['https://sheets.googleapis.com/$discovery/rest?version=v4']
     }).then(() => {
       gapi.auth2.getAuthInstance().signIn();
@@ -450,4 +450,5 @@
 
 </body>
 </html>
+
 
